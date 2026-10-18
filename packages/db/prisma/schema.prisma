@@ -1,0 +1,168 @@
+// ═══════════════════════════════════════════════════════
+// CanaryGuard — Prisma Schema
+// All data models for the deployment platform
+// ═══════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Service ─────────────────────────────────────────
+
+model Service {
+  id                  String       @id @default(cuid())
+  name                String       @unique
+  repository          String
+  kubernetesNamespace String       @default("default") @map("kubernetes_namespace")
+  deploymentName      String       @default("") @map("deployment_name")
+  currentVersion      String       @map("current_version")
+  healthStatus        String       @default("UNKNOWN") @map("health_status")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  deployments Deployment[]
+  policies    Policy[]
+
+  @@map("services")
+}
+
+// ─── Deployment ──────────────────────────────────────
+
+model Deployment {
+  id            String    @id @default(cuid())
+  serviceId     String    @map("service_id")
+  version       String
+  gitCommit     String    @map("git_commit")
+  image         String
+  status        String    @default("PENDING")
+  triggeredBy   String    @map("triggered_by")
+  canaryWeight  Int       @default(0) @map("canary_weight")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  failureReason String?   @map("failure_reason")
+
+  service   Service          @relation(fields: [serviceId], references: [id])
+  steps     DeploymentStep[]
+  agentRuns AgentRun[]
+  approvals Approval[]
+  auditLogs AuditLog[]
+
+  @@index([serviceId])
+  @@index([status])
+  @@map("deployments")
+}
+
+// ─── Deployment Step ─────────────────────────────────
+
+model DeploymentStep {
+  id           String    @id @default(cuid())
+  deploymentId String    @map("deployment_id")
+  stepType     String    @map("step_type")
+  status       String    @default("PENDING")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  metadata     Json?
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id])
+
+  @@index([deploymentId])
+  @@map("deployment_steps")
+}
+
+// ─── Agent Run ───────────────────────────────────────
+
+model AgentRun {
+  id             String    @id @default(cuid())
+  deploymentId   String    @map("deployment_id")
+  status         String    @default("PENDING")
+  startedAt      DateTime  @default(now()) @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  model          String    @default("")
+  confidence     Float?
+  recommendation String?
+  summary        String?
+
+  deployment Deployment    @relation(fields: [deploymentId], references: [id])
+  evidence   AgentEvidence[]
+
+  @@index([deploymentId])
+  @@map("agent_runs")
+}
+
+// ─── Agent Evidence ──────────────────────────────────
+
+model AgentEvidence {
+  id              String   @id @default(cuid())
+  agentRunId      String   @map("agent_run_id")
+  sourceType      String   @map("source_type")
+  sourceReference String   @map("source_reference")
+  evidence        String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  agentRun AgentRun @relation(fields: [agentRunId], references: [id])
+
+  @@index([agentRunId])
+  @@map("agent_evidence")
+}
+
+// ─── Policy ──────────────────────────────────────────
+
+model Policy {
+  id                       String   @id @default(cuid())
+  serviceId                String   @map("service_id")
+  name                     String
+  errorRateThreshold       Float    @map("error_rate_threshold")
+  latencyThreshold         Float    @map("latency_threshold")
+  observationWindowSeconds Int      @map("observation_window_seconds")
+  autoRollback             Boolean  @default(false) @map("auto_rollback")
+  requiresApproval         Boolean  @default(true) @map("requires_approval")
+  enabled                  Boolean  @default(true)
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  service Service @relation(fields: [serviceId], references: [id])
+
+  @@index([serviceId])
+  @@map("policies")
+}
+
+// ─── Approval ────────────────────────────────────────
+
+model Approval {
+  id           String    @id @default(cuid())
+  deploymentId String    @map("deployment_id")
+  action       String
+  requestedAt  DateTime  @default(now()) @map("requested_at")
+  respondedAt  DateTime? @map("responded_at")
+  respondedBy  String?   @map("responded_by")
+  status       String    @default("PENDING")
+  reason       String?
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id])
+
+  @@index([deploymentId])
+  @@map("approvals")
+}
+
+// ─── Audit Log ───────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  deploymentId String?  @map("deployment_id")
+  actorType    String   @map("actor_type")
+  actorId      String   @map("actor_id")
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  deployment Deployment? @relation(fields: [deploymentId], references: [id])
+
+  @@index([deploymentId])
+  @@index([action])
+  @@map("audit_logs")
+}
