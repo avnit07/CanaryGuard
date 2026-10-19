@@ -103,7 +103,7 @@ const services = [
     name: "WEB     ",
     color: colors.bright + colors.green,
     command: "npx",
-    args: ["next", "start", "-p", "3001"],
+    args: ["next", "dev", "-p", "3001"],
     cwd: path.join(rootDir, "apps/web"),
     env: {
       PORT: "3001",

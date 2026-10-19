@@ -1,99 +1,121 @@
 import React from "react";
 
-interface StatusBadgeProps {
+export interface StatusBadgeProps {
   status: string;
   type?: "deployment" | "health" | "step";
+  className?: string;
 }
 
-export function StatusBadge({ status, type = "deployment" }: StatusBadgeProps) {
-  let bg = "bg-gray-800 text-gray-300 border-gray-700";
-  let dot = "bg-gray-400";
-  let pulse = false;
+export function StatusBadge({ status, type = "deployment", className = "" }: StatusBadgeProps) {
+  const s = (status || "UNKNOWN").toUpperCase();
 
-  const s = status.toUpperCase();
+  let variant: "emerald" | "amber" | "coral" | "steel" | "cyan" = "steel";
+  let pulse = false;
 
   if (type === "health") {
     switch (s) {
       case "HEALTHY":
-        bg = "bg-emerald-950/60 text-emerald-300 border-emerald-800/80";
-        dot = "bg-emerald-400";
+        variant = "emerald";
         break;
       case "DEGRADED":
-        bg = "bg-amber-950/60 text-amber-300 border-amber-800/80";
-        dot = "bg-amber-400";
+        variant = "amber";
         pulse = true;
         break;
       case "UNHEALTHY":
-        bg = "bg-rose-950/60 text-rose-300 border-rose-800/80";
-        dot = "bg-rose-400";
+        variant = "coral";
         pulse = true;
         break;
       default:
-        bg = "bg-slate-800 text-slate-300 border-slate-700";
-        dot = "bg-slate-400";
+        variant = "steel";
     }
   } else {
-    // Deployment status or step status
+    // Deployment / Pipeline step statuses
     switch (s) {
-      case "PENDING":
-        bg = "bg-slate-800 text-slate-300 border-slate-700";
-        dot = "bg-slate-400";
+      case "PROMOTED":
+      case "COMPLETED":
+        variant = "emerald";
         break;
-      case "BUILDING":
-      case "DEPLOYING":
-      case "RUNNING":
-        bg = "bg-blue-950/60 text-blue-300 border-blue-800/80";
-        dot = "bg-blue-400";
+
+      case "PROMOTING":
+        variant = "emerald";
         pulse = true;
         break;
+
       case "CANARY":
       case "CANARY_ACTIVE":
       case "OBSERVING":
-        bg = "bg-amber-950/60 text-amber-300 border-amber-800/80";
-        dot = "bg-amber-400";
-        pulse = true;
-        break;
-      case "INVESTIGATING":
-        bg = "bg-purple-950/60 text-purple-300 border-purple-800/80";
-        dot = "bg-purple-400";
-        pulse = true;
-        break;
       case "AWAITING_APPROVAL":
-        bg = "bg-orange-950/60 text-orange-300 border-orange-800/80";
-        dot = "bg-orange-400";
+        variant = "amber";
         pulse = true;
         break;
-      case "PROMOTING":
-      case "PROMOTED":
-      case "COMPLETED":
-        bg = "bg-emerald-950/60 text-emerald-300 border-emerald-800/80";
-        dot = "bg-emerald-400";
-        break;
+
+      case "CANARY_DEGRADED":
       case "ROLLING_BACK":
-        bg = "bg-rose-950/60 text-rose-300 border-rose-800/80";
-        dot = "bg-rose-400";
+        variant = "coral";
         pulse = true;
         break;
+
       case "ROLLED_BACK":
       case "FAILED":
-        bg = "bg-rose-950/60 text-rose-300 border-rose-800/80";
-        dot = "bg-rose-400";
+        variant = "coral";
         break;
+
+      case "INVESTIGATING":
+        variant = "cyan";
+        pulse = true;
+        break;
+
+      case "BUILDING":
+      case "DEPLOYING":
+      case "RUNNING":
+        variant = "cyan";
+        pulse = true;
+        break;
+
+      case "PENDING":
       case "SKIPPED":
-        bg = "bg-zinc-800/60 text-zinc-400 border-zinc-700";
-        dot = "bg-zinc-500";
-        break;
+      default:
+        variant = "steel";
     }
   }
 
+  // One style only: soft solid background + dark text + small dot (no borders, no glows)
+  const styles = {
+    emerald: {
+      badge: "bg-[#DCFCE7] text-[#166534]",
+      dot: "bg-healthy",
+    },
+    amber: {
+      badge: "bg-[#FEF3C7] text-[#92400E]",
+      dot: "bg-canary",
+    },
+    coral: {
+      badge: "bg-[#FEE2E2] text-[#991B1B]",
+      dot: "bg-failed",
+    },
+    cyan: {
+      badge: "bg-[#DBEAFE] text-[#1E40AF]",
+      dot: "bg-primary",
+    },
+    steel: {
+      badge: "bg-[#F1F5F9] text-[#334155]",
+      dot: "bg-baseline",
+    },
+  };
+
+  const current = styles[variant];
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${bg}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-12 font-medium rounded select-none ${current.badge} ${className}`}
     >
       <span
-        className={`w-1.5 h-1.5 rounded-full ${dot} ${pulse ? "animate-ping opacity-75" : ""}`}
+        aria-hidden="true"
+        className={`w-1.5 h-1.5 rounded-full shrink-0 ${current.dot} ${
+          pulse ? "animate-pulse" : ""
+        }`}
       />
-      {status}
+      <span>{status}</span>
     </span>
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
-  Server,
-  Rocket,
-  ShieldCheck,
+  Play,
   Activity,
   Layers,
   ArrowRight,
@@ -13,13 +12,44 @@ import {
   Clock,
   RefreshCw,
   Plus,
+  Shield,
+  Copy,
+  Check,
 } from "lucide-react";
 import { api, ServiceWithStats, DeploymentListItem } from "@/lib/api";
+import { formatVersion } from "@/lib/formatters";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CreateServiceModal } from "@/components/CreateServiceModal";
 import { TriggerDeploymentModal } from "@/components/TriggerDeploymentModal";
+import {
+  Button,
+  Panel,
+  Table,
+  TableHead,
+  TableRow,
+  TableHeaderCell,
+  TableCell,
+  Skeleton,
+  Alert,
+} from "@/components/ui";
 
-export default function DashboardPage() {
+// Formats raw elapsed seconds into readable time: "5h 37m", "14m 20s", or "32s"
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSec = seconds % 60;
+  if (minutes < 60) {
+    return `${minutes}m ${remainingSec > 0 ? `${remainingSec}s` : ""}`.trim();
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMin = minutes % 60;
+  return `${hours}h ${remainingMin > 0 ? `${remainingMin}m` : ""}`.trim();
+}
+
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const serviceParam = searchParams.get("service") || "";
+
   const [services, setServices] = useState<ServiceWithStats[]>([]);
   const [deployments, setDeployments] = useState<DeploymentListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +57,15 @@ export default function DashboardPage() {
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [deployModalOpen, setDeployModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Selected service displayed in the primary stage
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+
+  // Filter for the flight log table: "ALL" or "SELECTED"
+  const [flightLogScope, setFlightLogScope] = useState<"ALL" | "SELECTED">("ALL");
+
+  // Copy feedback state for git commits
+  const [copiedCommitId, setCopiedCommitId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -37,13 +76,44 @@ export default function DashboardPage() {
       ]);
       setServices(svcData);
       setDeployments(depData);
+
+      // Default selected service
+      if (svcData.length > 0) {
+        setSelectedServiceId((prev) => {
+          if (serviceParam && svcData.some((s) => s.id === serviceParam)) {
+            return serviceParam;
+          }
+          if (prev && svcData.some((s) => s.id === prev)) return prev;
+          const activeService = svcData.find((s) => {
+            const dep = s.deployments?.[0];
+            return (
+              dep &&
+              [
+                "CANARY",
+                "CANARY_ACTIVE",
+                "OBSERVING",
+                "CANARY_DEGRADED",
+                "INVESTIGATING",
+              ].includes(dep.status)
+            );
+          });
+          return activeService ? activeService.id : svcData[0].id;
+        });
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+      setError(err instanceof Error ? err.message : "Failed to load cluster fleet data");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [serviceParam]);
+
+  // Sync when URL service param changes
+  useEffect(() => {
+    if (serviceParam) {
+      setSelectedServiceId(serviceParam);
+    }
+  }, [serviceParam]);
 
   useEffect(() => {
     fetchData();
@@ -56,287 +126,473 @@ export default function DashboardPage() {
     fetchData();
   };
 
-  // Calculations for Stat Cards
+  const copyCommit = (e: React.MouseEvent, commit: string, id: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(commit);
+    setCopiedCommitId(id);
+    setTimeout(() => setCopiedCommitId(null), 2000);
+  };
+
+  // Selected service metrics & pipeline calculations
+  const selectedService = useMemo(() => {
+    return services.find((s) => s.id === selectedServiceId) || services[0] || null;
+  }, [services, selectedServiceId]);
+
+  const activeDeploymentForSelected = useMemo(() => {
+    if (!selectedService) return null;
+    return (
+      deployments.find(
+        (d) =>
+          d.serviceId === selectedService.id &&
+          !["PROMOTED", "ROLLED_BACK", "FAILED"].includes(d.status)
+      ) || null
+    );
+  }, [deployments, selectedService]);
+
+  const canaryWeight = activeDeploymentForSelected?.canaryWeight ?? 0;
+  const baselineWeight = 100 - canaryWeight;
+
+  // Stat Counters
   const totalServices = services.length;
-  const activeDeployments = deployments.filter(
-    (d) => !["PROMOTED", "ROLLED_BACK", "FAILED"].includes(d.status)
-  ).length;
-  const canaryInFlight = deployments.filter(
-    (d) => ["CANARY", "CANARY_ACTIVE", "OBSERVING"].includes(d.status)
+  const canaryInFlight = deployments.filter((d) =>
+    ["CANARY", "CANARY_ACTIVE", "OBSERVING", "CANARY_DEGRADED", "INVESTIGATING"].includes(
+      d.status
+    )
   ).length;
   const healthyServices = services.filter((s) => s.healthStatus === "HEALTHY").length;
 
+  // Filtered Deployments for Table
+  const tableDeployments = useMemo(() => {
+    if (flightLogScope === "SELECTED" && selectedService) {
+      return deployments.filter((d) => d.serviceId === selectedService.id);
+    }
+    return deployments;
+  }, [deployments, flightLogScope, selectedService]);
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Page Title & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 pb-16">
+      {/* ─── Top Control Deck Header ───────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
-            Control Plane Overview
+          <div className="flex items-center gap-2 text-12 text-muted mb-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+            <span>Infrastructure control plane</span>
+            <span>•</span>
+            <span>Local-dev region</span>
+          </div>
+          <h1 className="text-28 font-semibold text-text">
+            Deployment fleet control center
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Real-time canary deployment monitoring & automated rollback policies
-          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2 text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800 rounded-lg transition-colors hover:bg-slate-800"
-            title="Refresh dashboard"
+            title="Poll cluster metrics"
+            icon={
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-primary" : ""}`}
+              />
+            }
           >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-emerald-400" : ""}`} />
-          </button>
-          <button
+            Sync
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setServiceModalOpen(true)}
-            className="px-3.5 py-2 text-sm font-medium text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
+            icon={<Plus className="w-3.5 h-3.5" />}
           >
-            <Plus className="w-4 h-4" />
-            Add Service
-          </button>
-          <button
+            Register service
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setDeployModalOpen(true)}
             disabled={services.length === 0}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors flex items-center gap-1.5 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+            icon={<Play className="w-3.5 h-3.5" />}
           >
-            <Rocket className="w-4 h-4" />
-            Deploy Canary
-          </button>
+            Deploy canary
+          </Button>
         </div>
       </div>
 
+      {/* API Error Callout */}
       {error && (
-        <div className="p-4 bg-rose-950/40 border border-rose-800 rounded-xl text-rose-300 text-sm flex items-center justify-between">
-          <span>Failed to connect to CanaryGuard API: {error}</span>
-          <button onClick={fetchData} className="underline text-xs hover:text-white">
-            Retry
-          </button>
-        </div>
+        <Alert variant="coral" title="API connection failure">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-14">{error}</span>
+            <Button size="sm" variant="danger" onClick={fetchData}>
+              Retry connection
+            </Button>
+          </div>
+        </Alert>
       )}
 
-      {/* ─── Metric Stat Cards ────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Services */}
-        <div className="p-5 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Managed Services</span>
-            <Server className="w-4 h-4 text-emerald-400" />
+      {/* ─── Top 3-KPI Stat Row: Single panel with dividers between stats ─── */}
+      <Panel className="p-0 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+          {/* KPI 1: Canaries in flight */}
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <span className="text-12 text-muted block">
+                Canaries in flight
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-28 font-semibold font-mono tabular-nums text-text">
+                  {loading ? "--" : canaryInFlight}
+                </span>
+                <span className="text-12 text-muted">
+                  {canaryInFlight > 0 ? "active in-flight" : "all nominal"}
+                </span>
+              </div>
+            </div>
+            <div className="p-2 rounded bg-page text-canary shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-100">{totalServices}</span>
-            <span className="text-xs text-emerald-400 font-medium">
-              {healthyServices}/{totalServices} healthy
+
+          {/* KPI 2: Cluster protection */}
+          <div className="p-4 flex items-center justify-between">
+            <div>
+              <span className="text-12 text-muted block">
+                Cluster protection
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-20 font-semibold text-healthy">
+                  ARMED
+                </span>
+                <span className="text-12 text-muted font-mono tabular-nums">
+                  {healthyServices}/{totalServices} healthy
+                </span>
+              </div>
+            </div>
+            <div className="p-2 rounded bg-page text-healthy shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* KPI 3: Active target service */}
+          <div className="p-4 flex items-center justify-between">
+            <div className="min-w-0 pr-2">
+              <span className="text-12 text-muted block">
+                Active target service
+              </span>
+              <div className="flex items-center gap-2 mt-1 truncate">
+                <span className="text-16 font-semibold text-text truncate">
+                  {selectedService?.name || "None"}
+                </span>
+                {selectedService && (
+                  <StatusBadge status={selectedService.healthStatus} type="health" />
+                )}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-page text-primary shrink-0">
+              <Activity className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      {/* ─── Active Service Live Routing Deck (Max two levels of boxes) ─── */}
+      {selectedService ? (
+        <Panel className="p-4 space-y-4">
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-border pb-3">
+            <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 mt-1.5 sm:mt-0" />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-20 font-semibold text-text break-all">
+                    {selectedService.name}
+                  </h2>
+                  <span className="text-12 font-mono text-muted">
+                    Baseline {formatVersion(selectedService.currentVersion)}
+                  </span>
+                  {activeDeploymentForSelected && (
+                    <StatusBadge status={activeDeploymentForSelected.status} />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              {activeDeploymentForSelected ? (
+                <Link href={`/deployments/${activeDeploymentForSelected.id}`}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<ArrowRight className="w-3.5 h-3.5" />}
+                  >
+                    Inspect full cockpit
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setDeployModalOpen(true)}
+                  icon={<Play className="w-3.5 h-3.5" />}
+                >
+                  Trigger canary
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Allocation Bar Header */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-12">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-baseline inline-block rounded-sm shrink-0" />
+                <span className="text-muted">Baseline release:</span>
+                <strong className="text-text font-mono tabular-nums font-semibold">{baselineWeight}%</strong>
+                <span className="text-muted font-mono tabular-nums">({formatVersion(selectedService.currentVersion)})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-canary inline-block rounded-sm shrink-0" />
+                <span className="text-canary font-medium">Canary candidate:</span>
+                <strong className="text-canary font-mono tabular-nums font-semibold">{canaryWeight}%</strong>
+                {activeDeploymentForSelected && (
+                  <span className="text-muted font-mono tabular-nums">({formatVersion(activeDeploymentForSelected.version)})</span>
+                )}
+              </div>
+            </div>
+
+            {/* Traffic Allocation Bar (Solid, no gradient) */}
+            <div className="h-3 w-full bg-page border border-border rounded flex overflow-hidden">
+              <div
+                className="bg-baseline transition-all duration-300"
+                style={{ width: `${baselineWeight}%` }}
+                title={`Baseline: ${baselineWeight}%`}
+              />
+              <div
+                className="bg-canary transition-all duration-300"
+                style={{ width: `${canaryWeight}%` }}
+                title={`Canary: ${canaryWeight}%`}
+              />
+            </div>
+
+            {/* Plain text columns under traffic bar, separated by single divider (No nested boxes) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border">
+              <div>
+                <span className="text-12 text-muted block">Baseline target</span>
+                <div className="text-14 font-mono text-text tabular-nums mt-0.5">
+                  :8080 ({baselineWeight}%)
+                </div>
+              </div>
+              <div>
+                <span className="text-12 text-muted block">Proxy router</span>
+                <div className="text-14 font-mono text-text tabular-nums mt-0.5">
+                  :8000 (Active)
+                </div>
+              </div>
+              <div>
+                <span className="text-12 text-muted block">Canary target</span>
+                <div className="text-14 font-mono text-canary tabular-nums mt-0.5">
+                  :8081 ({canaryWeight}%)
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Subtitle */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-12 text-muted pt-2 border-t border-border">
+            <span>
+              {activeDeploymentForSelected ? (
+                <>
+                  Rollout stage:{" "}
+                  <strong className="text-text font-medium">
+                    {activeDeploymentForSelected.status}
+                  </strong>{" "}
+                  (Candidate: <span className="font-mono tabular-nums">{formatVersion(activeDeploymentForSelected.version)}</span>)
+                </>
+              ) : (
+                "All traffic routed 100% to baseline. Automated guardrails nominal."
+              )}
+            </span>
+
+            <span className="font-mono tabular-nums">
+              Namespace: {selectedService.kubernetesNamespace || "default"}
             </span>
           </div>
-        </div>
+        </Panel>
+      ) : null}
 
-        {/* Active Deployments */}
-        <div className="p-5 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Active Rollouts</span>
-            <Activity className="w-4 h-4 text-blue-400" />
+      {/* ─── Deployment Flight Logs Table (Full Width) ──────── */}
+      <Panel className="overflow-hidden p-0">
+        {/* Table Header Controls */}
+        <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-surface">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <h3 className="text-16 font-semibold text-text">
+              Deployment flight logs
+            </h3>
+            <span className="text-12 font-mono text-muted tabular-nums">
+              ({tableDeployments.length})
+            </span>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-100">{activeDeployments}</span>
-            <span className="text-xs text-blue-400 font-medium">in progression</span>
-          </div>
-        </div>
 
-        {/* Canary Traffic Active */}
-        <div className="p-5 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Canaries In Flight</span>
-            <Layers className="w-4 h-4 text-amber-400" />
+          {/* Scope Switcher: All vs Selected Service */}
+          <div className="flex items-center bg-page p-0.5 rounded border border-border text-12">
+            <button
+              onClick={() => setFlightLogScope("ALL")}
+              className={`px-3 py-1 rounded transition-colors ${
+                flightLogScope === "ALL"
+                  ? "bg-surface text-text font-medium border border-border"
+                  : "text-muted hover:text-text"
+              }`}
+            >
+              All releases ({deployments.length})
+            </button>
+            {selectedService && (
+              <button
+                onClick={() => setFlightLogScope("SELECTED")}
+                className={`px-3 py-1 rounded transition-colors ${
+                  flightLogScope === "SELECTED"
+                    ? "bg-surface text-text font-medium border border-border"
+                    : "text-muted hover:text-text"
+                }`}
+              >
+                {selectedService.name} only
+              </button>
+            )}
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-100">{canaryInFlight}</span>
-            <span className="text-xs text-amber-400 font-medium">traffic split</span>
-          </div>
-        </div>
-
-        {/* Automated Protection */}
-        <div className="p-5 bg-slate-900/60 border border-slate-800/80 rounded-xl">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Guard Status</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-emerald-400">ARMED</span>
-            <span className="text-xs text-slate-400">auto-rollback enabled</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Managed Services Section ─────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-            <Server className="w-4 h-4 text-emerald-400" />
-            Registered Services
-          </h2>
-          <span className="text-xs text-slate-400">{services.length} services configured</span>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">
-            Loading services...
+          <div className="p-6 space-y-3">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
           </div>
-        ) : services.length === 0 ? (
-          <div className="p-8 text-center bg-slate-900/30 border border-dashed border-slate-800 rounded-xl">
-            <p className="text-sm text-slate-400">No services registered yet.</p>
-            <button
-              onClick={() => setServiceModalOpen(true)}
-              className="mt-3 text-xs font-medium text-emerald-400 hover:text-emerald-300 underline"
-            >
-              Register your first microservice
-            </button>
+        ) : tableDeployments.length === 0 ? (
+          <div className="p-8 text-center text-12 text-muted">
+            No deployment history found for this view.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {services.map((svc) => (
-              <div
-                key={svc.id}
-                className="p-5 bg-slate-900/50 border border-slate-800 rounded-xl hover:border-slate-700 transition-colors flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold text-slate-100 group-hover:text-emerald-300 transition-colors">
-                        {svc.name}
-                      </h3>
-                      <p className="text-xs font-mono text-slate-400 truncate max-w-[200px] mt-0.5">
-                        {svc.repository}
-                      </p>
-                    </div>
-                    <StatusBadge status={svc.healthStatus} type="health" />
-                  </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>Service & Version</TableHeaderCell>
+                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell className="w-48">Traffic Split</TableHeaderCell>
+                  <TableHeaderCell>Git Commit</TableHeaderCell>
+                  <TableHeaderCell className="text-right">Started</TableHeaderCell>
+                  <TableHeaderCell className="text-right">Action</TableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <tbody>
+                {tableDeployments.map((dep) => {
+                  const elapsedMs = dep.completedAt
+                    ? new Date(dep.completedAt).getTime() - new Date(dep.startedAt).getTime()
+                    : Date.now() - new Date(dep.startedAt).getTime();
+                  const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
+                  const isCopied = copiedCommitId === dep.id;
 
-                  <div className="mt-4 pt-4 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-slate-500 block">Baseline Version</span>
-                      <span className="font-mono text-slate-200 font-medium">
-                        {svc.currentVersion}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block">Namespace</span>
-                      <span className="font-mono text-slate-300">
-                        {svc.kubernetesNamespace}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 flex items-center justify-between text-xs text-slate-400">
-                  <span>{svc._count?.deployments || 0} deployments</span>
-                  <button
-                    onClick={() => {
-                      setDeployModalOpen(true);
-                    }}
-                    className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
-                  >
-                    Deploy <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ─── Recent Deployments Table ─────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-            <Rocket className="w-4 h-4 text-blue-400" />
-            Recent Canary Deployments
-          </h2>
-          <span className="text-xs text-slate-400">{deployments.length} total releases</span>
-        </div>
-
-        {deployments.length === 0 ? (
-          <div className="p-8 text-center bg-slate-900/30 border border-dashed border-slate-800 rounded-xl text-slate-400 text-sm">
-            No deployments executed yet. Trigger your first release using the "Deploy Canary" button.
-          </div>
-        ) : (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-950/60 border-b border-slate-800 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <tr>
-                    <th className="px-5 py-3.5">Service & Release</th>
-                    <th className="px-5 py-3.5">Status</th>
-                    <th className="px-5 py-3.5">Traffic Split</th>
-                    <th className="px-5 py-3.5">Git Commit</th>
-                    <th className="px-5 py-3.5">Started</th>
-                    <th className="px-5 py-3.5 text-right">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {deployments.map((dep) => (
-                    <tr
-                      key={dep.id}
-                      className="hover:bg-slate-800/30 transition-colors"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="font-semibold text-slate-100">
+                  return (
+                    <TableRow key={dep.id}>
+                      {/* Service & Version */}
+                      <TableCell>
+                        <div className="font-medium text-text">
                           {dep.service?.name || "Service"}
                         </div>
-                        <div className="text-xs font-mono text-emerald-400">
-                          {dep.version}
+                        <div className="text-12 font-mono text-muted tabular-nums">
+                          {formatVersion(dep.version)}
                         </div>
-                      </td>
-                      <td className="px-5 py-4">
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell>
                         <StatusBadge status={dep.status} />
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="w-36">
-                          <div className="flex justify-between text-xs font-mono mb-1">
-                            <span className="text-slate-400">Canary</span>
-                            <span className="font-semibold text-amber-400">
-                              {dep.canaryWeight}%
+                      </TableCell>
+
+                      {/* Traffic Split with Clean Bar */}
+                      <TableCell>
+                        <div className="w-44 space-y-1">
+                          <div className="flex items-center justify-between text-12 font-mono tabular-nums">
+                            <span className="text-muted">
+                              Base {100 - dep.canaryWeight}%
+                            </span>
+                            <span className="text-canary font-medium">
+                              Canary {dep.canaryWeight}%
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-page rounded flex overflow-hidden border border-border">
                             <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-amber-500 transition-all duration-500"
+                              className="bg-baseline"
+                              style={{ width: `${100 - dep.canaryWeight}%` }}
+                            />
+                            <div
+                              className="bg-canary"
                               style={{ width: `${dep.canaryWeight}%` }}
                             />
                           </div>
                         </div>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
-                        <GitCommit className="w-3.5 h-3.5 text-slate-500" />
-                        {dep.gitCommit.substring(0, 7)}
-                      </td>
-                      <td className="px-5 py-4 text-xs text-slate-400">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          {new Date(dep.startedAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                      </TableCell>
+
+                      {/* Git Commit Hash */}
+                      <TableCell>
+                        <button
+                          onClick={(e) => copyCommit(e, dep.gitCommit || "unknown", dep.id)}
+                          className="font-mono tabular-nums text-12 text-muted hover:text-text flex items-center gap-1.5 px-2 py-1 rounded bg-page border border-border transition-colors"
+                          title="Click to copy commit hash"
+                        >
+                          <GitCommit className="w-3.5 h-3.5 text-muted shrink-0" />
+                          <span>{(dep.gitCommit || "unknown").substring(0, 7)}</span>
+                          {isCopied ? (
+                            <Check className="w-3 h-3 text-healthy" />
+                          ) : (
+                            <Copy className="w-3 h-3 opacity-40 hover:opacity-100" />
+                          )}
+                        </button>
+                      </TableCell>
+
+                      {/* Started & Duration (Numeric, Right-aligned) */}
+                      <TableCell className="text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5 text-12 font-mono tabular-nums text-muted">
+                          <Clock className="w-3.5 h-3.5 text-muted shrink-0" />
+                          <span>
+                            {new Date(dep.startedAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span className="text-text font-medium">
+                            {formatDuration(elapsedSec)}
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-5 py-4 text-right">
+                      </TableCell>
+
+                      {/* Action (Right-aligned) */}
+                      <TableCell className="text-right">
                         <Link
                           href={`/deployments/${dep.id}`}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
+                          className="inline-flex items-center gap-1 text-12 font-medium text-primary hover:underline"
                         >
-                          Inspect <ArrowRight className="w-3.5 h-3.5" />
+                          <span>Inspect</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </tbody>
+            </Table>
           </div>
         )}
-      </div>
+      </Panel>
 
-      {/* Modals */}
+      {/* ─── Modals ────────────────────────────────────────── */}
       <CreateServiceModal
         isOpen={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
@@ -349,5 +605,13 @@ export default function DashboardPage() {
         onSuccess={fetchData}
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-12 text-muted">Loading cockpit...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

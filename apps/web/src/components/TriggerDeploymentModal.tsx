@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Rocket, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Rocket } from "lucide-react";
 import { api, ServiceWithStats } from "@/lib/api";
+import { formatVersion } from "@/lib/formatters";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Alert } from "@/components/ui/Alert";
 
 interface TriggerDeploymentModalProps {
   isOpen: boolean;
@@ -23,27 +28,39 @@ export function TriggerDeploymentModal({
   const [version, setVersion] = useState("v2.1.5");
   const [gitCommit, setGitCommit] = useState("b4d91a2");
   const [image, setImage] = useState("");
-  const [triggeredBy, setTriggeredBy] = useState("engineer@company.internal");
+  const [triggeredBy, setTriggeredBy] = useState("sre-engineer@canaryguard.io");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Sync serviceId default if services load after mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (!serviceId && services.length > 0) {
       setServiceId(services[0].id);
     }
   }, [services, serviceId]);
+
+  // Keyboard navigation: Escape closes modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!serviceId) {
-      setError("Please select a target service");
+      setError("Please select an active target microservice.");
       return;
     }
     if (!version.trim()) {
-      setError("Release version is required");
+      setError("Release candidate version is required.");
       return;
     }
 
@@ -65,130 +82,135 @@ export function TriggerDeploymentModal({
       onClose();
       router.push(`/deployments/${created.id}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to trigger deployment");
+      setError(err instanceof Error ? err.message : "Failed to trigger canary rollout");
     } finally {
       setLoading(false);
     }
   };
 
+  const serviceOptions = services.map((svc) => ({
+    value: svc.id,
+    label: `${svc.name} (Current: ${formatVersion(svc.currentVersion)})`,
+  }));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-trigger-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-page/80"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-lg bg-elevated border border-border-strong rounded-modal overflow-hidden shadow-none select-none">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
+            <div className="p-2 bg-raised text-signal-cyan rounded border border-border-subtle">
               <Rocket className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">Trigger Canary Deployment</h2>
-              <p className="text-xs text-slate-400">Deploy a release with progressive canary traffic scaling</p>
+              <h2 id="modal-trigger-title" className="text-16 font-bold text-text-primary">
+                Trigger Canary Deployment
+              </h2>
+              <p className="text-12 text-text-muted mt-0.5">
+                Launch progressive canary release with automated policy observation
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 transition-colors p-1"
+            className="p-1 text-text-muted hover:text-text-primary hover:bg-raised rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal-cyan"
+            title="Close dialog (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-rose-950/40 border border-rose-800 rounded-lg text-rose-300 text-sm">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
+            <Alert variant="coral" title="Launch Failed">
+              {error}
+            </Alert>
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-              Target Service <span className="text-rose-400">*</span>
-            </label>
-            <select
+            <Select
+              label="TARGET MICROSERVICE *"
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-            >
-              {services.map((svc) => (
-                <option key={svc.id} value={svc.id}>
-                  {svc.name} (Current: {svc.currentVersion})
-                </option>
-              ))}
-            </select>
+              options={serviceOptions}
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                New Version <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
+              <Input
+                label="CANDIDATE VERSION *"
                 required
                 placeholder="v2.1.5"
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                autoFocus
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Git Commit SHA
-              </label>
-              <input
-                type="text"
+              <Input
+                label="GIT COMMIT SHA"
                 placeholder="b4d91a2"
                 value={gitCommit}
                 onChange={(e) => setGitCommit(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-              Container Image (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. payment-service:v2.1.5"
+            <Input
+              label="CONTAINER IMAGE (OPTIONAL)"
+              placeholder="e.g. registry.company.internal/payment-service:v2.1.5"
               value={image}
               onChange={(e) => setImage(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-              Triggered By
-            </label>
-            <input
-              type="text"
-              placeholder="engineer@company.internal"
+            <Input
+              label="TRIGGERED BY"
+              placeholder="sre-engineer@canaryguard.io"
               value={triggeredBy}
               onChange={(e) => setTriggeredBy(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? "Triggering..." : "Launch Deployment"}
-            </button>
+          {/* Action Footer */}
+          <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+            <span className="text-12 font-mono text-text-muted">
+              Press <kbd className="px-1 py-0.5 bg-raised border border-border-subtle rounded text-[11px]">Esc</kbd> to cancel
+            </span>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={loading}
+                icon={<Rocket className="w-3.5 h-3.5" />}
+              >
+                Launch Rollout
+              </Button>
+            </div>
           </div>
         </form>
       </div>

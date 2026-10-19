@@ -2,14 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #0b0f19;
-  --foreground: #f3f4f6;
+:root,
+[data-theme="light"],
+html.light {
+  /* Surfaces & Canvas — Pure Solid Tokens */
+  --bg-page: #F7F8FA;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  --bg-raised: #F7F8FA;
+
+  /* Borders */
+  --border: #E3E6EC;
+  --border-subtle: #E3E6EC;
+  --border-strong: #E3E6EC;
+
+  /* Typography */
+  --text-primary: #111827;
+  --text-muted: #667085;
+
+  /* Primary Action (Buttons & Focus Only) */
+  --primary-action: #2563EB;
+
+  /* Domain Signal Colors */
+  --signal-baseline: #64748B;
+  --signal-canary: #D97706;
+  --signal-healthy: #16A34A;
+  --signal-failed: #DC2626;
+
+  /* Compatibility aliases for existing classes */
+  --signal-cyan: #2563EB;
+  --signal-emerald: #16A34A;
+  --signal-amber: #D97706;
+  --signal-coral: #DC2626;
+  --signal-steel: #64748B;
+}
+
+[data-theme="dark"],
+html.dark {
+  /* Retain fallback dark mapping if needed, aligned to solid tokens */
+  --bg-page: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-elevated: #1E293B;
+  --bg-raised: #0F172A;
+
+  --border: #334155;
+  --border-subtle: #334155;
+  --border-strong: #334155;
+
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+
+  --primary-action: #3B82F6;
+
+  --signal-baseline: #94A3B8;
+  --signal-canary: #F59E0B;
+  --signal-healthy: #22C55E;
+  --signal-failed: #EF4444;
+
+  --signal-cyan: #3B82F6;
+  --signal-emerald: #22C55E;
+  --signal-amber: #F59E0B;
+  --signal-coral: #EF4444;
+  --signal-steel: #94A3B8;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular Numbers for Data, Versions, Commit Hashes, Timestamps, and Metrics */
+.tabular-nums,
+code,
+pre,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus Ring (Solid #2563EB, 2px) */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-action);
+}
+
+/* Simple Opacity Pulse (No Shimmer Gradient) */
+@keyframes opacity-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: opacity-pulse 2s ease-in-out infinite;
+}
+
+/* Accessibility: Respect Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

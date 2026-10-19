@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Server, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Server } from "lucide-react";
 import { api } from "@/lib/api";
+import { formatVersion } from "@/lib/formatters";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
 
 interface CreateServiceModalProps {
   isOpen: boolean;
@@ -19,12 +23,24 @@ export function CreateServiceModal({ isOpen, onClose, onSuccess }: CreateService
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Keyboard navigation: Escape closes modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !repository.trim()) {
-      setError("Service name and repository are required");
+      setError("Service name and repository are required fields.");
       return;
     }
 
@@ -36,7 +52,7 @@ export function CreateServiceModal({ isOpen, onClose, onSuccess }: CreateService
         repository: repository.trim(),
         kubernetesNamespace: kubernetesNamespace.trim() || "production",
         deploymentName: deploymentName.trim() || name.trim(),
-        currentVersion: currentVersion.trim() || "v1.0.0",
+        currentVersion: formatVersion(currentVersion.trim() || "1.0.0"),
       });
       setName("");
       setRepository("");
@@ -44,49 +60,58 @@ export function CreateServiceModal({ isOpen, onClose, onSuccess }: CreateService
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create service");
+      setError(err instanceof Error ? err.message : "Failed to register service");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-page/80"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-lg bg-elevated border border-border-strong rounded-modal overflow-hidden shadow-none select-none">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+            <div className="p-2 bg-raised text-signal-cyan rounded border border-border-subtle">
               <Server className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">Register Microservice</h2>
-              <p className="text-xs text-slate-400">Configure a service for automated canary protection</p>
+              <h2 id="modal-title" className="text-16 font-bold text-text-primary">
+                Register Microservice
+              </h2>
+              <p className="text-12 text-text-muted mt-0.5">
+                Configure a service target for automated canary deployment guardrails
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 transition-colors p-1"
+            className="p-1 text-text-muted hover:text-text-primary hover:bg-raised rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal-cyan"
+            title="Close dialog (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-rose-950/40 border border-rose-800 rounded-lg text-rose-300 text-sm">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
+            <Alert variant="coral" title="Registration Failed">
+              {error}
+            </Alert>
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-              Service Name <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
+            <Input
+              label="SERVICE IDENTIFIER *"
               required
               placeholder="e.g. payment-service"
               value={name}
@@ -94,67 +119,64 @@ export function CreateServiceModal({ isOpen, onClose, onSuccess }: CreateService
                 setName(e.target.value);
                 if (!deploymentName) setDeploymentName(e.target.value);
               }}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+              autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-              Repository URL <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
+            <Input
+              label="REPOSITORY URL *"
               required
-              placeholder="e.g. github.com/organization/payment-service"
+              placeholder="e.g. https://github.com/organization/payment-service"
               value={repository}
               onChange={(e) => setRepository(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                K8s Namespace
-              </label>
-              <input
-                type="text"
+              <Input
+                label="K8S NAMESPACE"
                 placeholder="production"
                 value={kubernetesNamespace}
                 onChange={(e) => setKubernetesNamespace(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                Baseline Version
-              </label>
-              <input
-                type="text"
+              <Input
+                label="BASELINE VERSION"
                 placeholder="v1.0.0"
                 value={currentVersion}
                 onChange={(e) => setCurrentVersion(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              {loading ? "Registering..." : "Register Service"}
-            </button>
+          {/* Action Footer */}
+          <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+            <span className="text-12 font-mono text-text-muted">
+              Press <kbd className="px-1 py-0.5 bg-raised border border-border-subtle rounded text-[11px]">Esc</kbd> to cancel
+            </span>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={loading}
+              >
+                Register Service
+              </Button>
+            </div>
           </div>
         </form>
       </div>

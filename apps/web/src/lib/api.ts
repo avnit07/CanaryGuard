@@ -137,6 +137,31 @@ export const api = {
     return json.data;
   },
 
+  rollbackDeployment: async (
+    id: string,
+    payload?: { reason?: string }
+  ): Promise<{ jobId: string; deploymentId: string }> => {
+    const json = await apiFetch<{ message: string; data: { jobId: string; deploymentId: string } }>(
+      `/api/deployments/${id}/rollback`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload || {}),
+      }
+    );
+    return json.data;
+  },
+
+  evaluateDeployment: async (
+    id: string,
+    payload?: { targetUrl?: string }
+  ): Promise<any> => {
+    const json = await apiFetch<{ data: any }>(`/api/deployments/${id}/evaluate`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+    return json.data;
+  },
+
   // Audit Logs
   getAuditLogs: async (params?: { deploymentId?: string; action?: string }): Promise<AuditLog[]> => {
     const query = new URLSearchParams();
