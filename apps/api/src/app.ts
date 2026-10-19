@@ -14,16 +14,21 @@ import { deploymentRoutes } from "./routes/deployments.js";
 import { policyRoutes } from "./routes/policies.js";
 import { auditLogRoutes } from "./routes/audit-logs.js";
 
+import { serverAdapter } from "./lib/bull-board.js";
+
 // ─── Create Express App ─────────────────────────────
 
 const app = express();
 
 // ─── Middleware ──────────────────────────────────────
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: API_CONFIG.corsOrigins }));
 app.use(express.json());
 app.use(morgan("dev"));
+
+// ─── Bull-Board Queue Dashboard ──────────────────────
+app.use("/admin/queues", serverAdapter.getRouter());
 
 // ─── Health Check ───────────────────────────────────
 

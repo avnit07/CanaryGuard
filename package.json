@@ -8,7 +8,14 @@
     "workers/*"
   ],
   "scripts": {
+    "start:all": "node scripts/start-platform.mjs",
     "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:demo": "npm run dev -w apps/demo-app",
+    "dev:demo:baseline": "npm run dev:baseline -w apps/demo-app",
+    "dev:demo:canary": "npm run dev:canary -w apps/demo-app",
+    "dev:proxy": "npm run dev -w apps/proxy",
+    "dev:worker": "npm run dev -w workers/workflow-worker",
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

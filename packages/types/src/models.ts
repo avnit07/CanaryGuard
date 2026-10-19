@@ -132,6 +132,28 @@ export interface HealthMetrics {
   timestamp: Date;
 }
 
+export interface HealthBreach {
+  type: "ERROR_RATE" | "LATENCY_P99" | "SERVICE_UNREACHABLE";
+  severity: "CRITICAL" | "WARNING";
+  message: string;
+  actualValue: number;
+  thresholdValue: number;
+}
+
+export interface HealthEvaluationResult {
+  status: HealthStatus;
+  isDegraded: boolean;
+  breaches: HealthBreach[];
+  metricsSnapshot: {
+    totalRequests: number;
+    errorRate: number;
+    latencyP99Ms: number;
+    latencyAvgMs: number;
+  };
+  summary: string;
+  evaluatedAt: Date;
+}
+
 // ─── API Request / Response DTOs ─────────────────────
 
 export interface CreateDeploymentRequest {

@@ -26,7 +26,7 @@ export const WORKER_CONFIG = {
 export const API_CONFIG = {
   port: parseInt(process.env.API_PORT || "4000", 10),
   host: process.env.API_HOST || "0.0.0.0",
-  corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:3000").split(","),
+  corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:3001").split(","),
 } as const;
 
 // ─── Deployment State Machine ────────────────────────
