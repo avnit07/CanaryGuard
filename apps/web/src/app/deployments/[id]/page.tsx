@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { api, DeploymentDetail } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TelemetryChart } from "@/components/TelemetryChart";
 import { VALID_TRANSITIONS, CANARY_STEPS } from "@canaryguard/config";
 
 export default function DeploymentDetailPage() {
@@ -212,6 +213,11 @@ export default function DeploymentDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Live Telemetry Time-Series Chart ────────────── */}
+      <TelemetryChart
+        canaryTargetUrl={deployment.canaryWeight > 0 ? "http://localhost:8081" : "http://localhost:8080"}
+      />
 
       {/* ─── AI Diagnostic Investigation & Rollback Action Panel ──────── */}
       {deployment.agentRuns && deployment.agentRuns.length > 0 && (
