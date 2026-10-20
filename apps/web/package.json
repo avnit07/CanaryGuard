@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npx tsc -p ../../packages/types && npx tsc -p ../../packages/config",
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "tsc --noEmit"

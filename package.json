@@ -16,7 +16,6 @@
     "dev:demo:canary": "npm run dev:canary -w apps/demo-app",
     "dev:proxy": "npm run dev -w apps/proxy",
     "dev:worker": "npm run dev -w workers/workflow-worker",
-    "postinstall": "npm run db:generate || true",
     "build:packages": "npm run db:generate && npm run build -w packages/types && npm run build -w packages/config && npm run build -w packages/db",
     "build:api": "npm run build:packages && npm run build -w apps/api",
     "build": "npm run build:packages && npm run build -w apps/api && npm run build -w apps/demo-app && npm run build -w apps/proxy && npm run build -w workers/workflow-worker && npm run build -w apps/web",
