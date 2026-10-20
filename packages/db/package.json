@@ -6,8 +6,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "prisma generate && tsc",
-    "generate": "prisma generate",
+    "build": "npx prisma generate && tsc",
+    "generate": "npx prisma generate",
     "push": "prisma db push",
     "migrate": "prisma migrate dev",
     "studio": "prisma studio",
