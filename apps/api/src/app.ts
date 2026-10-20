@@ -22,8 +22,11 @@ const app = express();
 
 // ─── Middleware ──────────────────────────────────────
 
+const rawCors = process.env.CORS_ORIGINS;
+const corsOrigin = (!rawCors || rawCors === "*") ? "*" : rawCors.split(",").map((s) => s.trim());
+
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: API_CONFIG.corsOrigins }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 app.use(morgan("dev"));
 
