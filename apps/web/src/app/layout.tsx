@@ -1,9 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Navbar } from "@/components/Navbar";
-import { AppSidebar } from "@/components/AppSidebar";
-import React, { Suspense } from "react";
+import { AppShell } from "@/components/AppShell";
+import React from "react";
 
 const geistSans = Geist({
   variable: "--font-geist",
@@ -16,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CanaryGuard — Control Plane",
+  title: "CanaryGuard — Autonomous Deployment Safety Platform",
   description: "Agentic Deployment Verification and Automated Rollback Platform",
 };
 
@@ -34,7 +33,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var saved = localStorage.getItem('canaryguard_theme');
-                  var theme = saved || 'light';
+                  var theme = saved || 'dark';
                   document.documentElement.setAttribute('data-theme', theme);
                   document.documentElement.className = theme;
                 } catch (e) {}
@@ -44,20 +43,9 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-page text-text-primary antialiased font-sans transition-colors duration-150 flex`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-[#0B0D15] text-text-primary antialiased font-sans transition-colors duration-150`}
       >
-        {/* Collapsible Left App Sidebar */}
-        <Suspense fallback={<div className="w-64 shrink-0 bg-surface border-r border-border-subtle" />}>
-          <AppSidebar />
-        </Suspense>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <Navbar />
-          <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
-            {children}
-          </main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

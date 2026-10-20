@@ -39,7 +39,7 @@ export default function DesignPreviewPage() {
       <div className="border-b border-border-subtle pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-text-muted mb-2">
-            <Link href="/" className="hover:text-text-primary flex items-center gap-1 transition-colors">
+            <Link href="/fleet" className="hover:text-text-primary flex items-center gap-1 transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Control Plane</span>
             </Link>

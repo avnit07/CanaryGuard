@@ -59,11 +59,17 @@ export function Navbar() {
   }, [checkApi]);
 
   // Dynamic breadcrumb label
-  const breadcrumbSection = pathname.startsWith("/deployments")
-    ? "Deployments"
+  const isDeploymentPage = pathname.startsWith("/deployments");
+  const deploymentId = isDeploymentPage ? pathname.split("/deployments/")[1] : null;
+  const breadcrumbSection = pathname.startsWith("/fleet")
+    ? "Fleet Control Plane"
     : pathname.startsWith("/design-preview")
-    ? "Design system"
-    : "Fleet overview";
+    ? "Design System"
+    : "Overview & Simulator";
+
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-surface select-none">
@@ -80,12 +86,27 @@ export function Navbar() {
 
           <ChevronRight className="w-3.5 h-3.5 text-muted hidden sm:inline shrink-0" />
 
-          <span className="text-text font-medium truncate">{breadcrumbSection}</span>
+          {isDeploymentPage ? (
+            <>
+              <Link
+                href="/fleet"
+                className="text-muted hover:text-text transition-colors truncate hidden sm:inline"
+              >
+                Fleet
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5 text-muted hidden sm:inline shrink-0" />
+              <span className="text-text font-medium truncate font-mono text-13">
+                {deploymentId || "Deployment Deck"}
+              </span>
+            </>
+          ) : (
+            <span className="text-text font-medium truncate">{breadcrumbSection}</span>
+          )}
         </div>
 
         {/* Right: API Health Ping & Theme Switcher */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 rounded bg-[#F7F8FA] border border-border text-12">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 rounded bg-raised border border-border text-12">
             {apiOnline === null ? (
               <>
                 <RefreshCw className="w-3 h-3 text-muted animate-spin" />
@@ -100,9 +121,16 @@ export function Navbar() {
                   {latencyMs !== null ? `${latencyMs}ms` : ":4000"}
                 </span>
               </>
+            ) : !isLocalhost ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                <span className="text-primary font-medium">Demo Cluster</span>
+                <span className="text-muted hidden sm:inline">•</span>
+                <span className="text-muted hidden sm:inline">Vercel Preview</span>
+              </>
             ) : (
               <>
-                <span className="w-1.5 h-1.5 rounded-full bg-failed shrink-0 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-failed shrink-0" />
                 <span className="text-failed font-medium">Offline</span>
               </>
             )}
@@ -111,7 +139,7 @@ export function Navbar() {
           {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="px-2.5 py-1 rounded bg-[#F7F8FA] border border-border hover:bg-surface text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center gap-1.5 text-12 select-none"
+            className="px-2.5 py-1 rounded bg-raised border border-border hover:bg-surface text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex items-center gap-1.5 text-12 select-none"
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             aria-label="Toggle visual theme"
           >

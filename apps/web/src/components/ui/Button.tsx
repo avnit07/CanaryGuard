@@ -36,7 +36,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       secondary:
         "bg-surface text-text border border-border hover:bg-page",
       danger:
-        "bg-surface text-failed border border-border hover:bg-[#FEE2E2]",
+        "bg-surface text-failed border border-border hover:bg-failed/10 dark:hover:bg-failed/20 hover:border-failed/40",
       ghost:
         "bg-transparent text-muted hover:text-text hover:bg-page border border-transparent",
     };

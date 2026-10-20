@@ -58,10 +58,10 @@ export function Modal({
       aria-labelledby="modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none"
     >
-      {/* Flat overlay: No backdrop-blur */}
+      {/* Backdrop overlay */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-[#111827]/30 transition-opacity"
+        className="fixed inset-0 bg-[#0B0D15]/75 backdrop-blur-sm transition-opacity"
       />
 
       {/* Modal Surface: 6px radius, border, no shadow */}

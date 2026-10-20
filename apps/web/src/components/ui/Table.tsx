@@ -34,7 +34,7 @@ export function TableRow({
   return (
     <tr
       onClick={onClick}
-      className={`h-12 border-b border-border hover:bg-[#F7F8FA] transition-colors ${
+      className={`h-12 border-b border-border hover:bg-raised transition-colors ${
         onClick ? "cursor-pointer" : ""
       } ${className}`}
     >

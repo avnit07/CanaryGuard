@@ -82,23 +82,23 @@ export function StatusBadge({ status, type = "deployment", className = "" }: Sta
   // One style only: soft solid background + dark text + small dot (no borders, no glows)
   const styles = {
     emerald: {
-      badge: "bg-[#DCFCE7] text-[#166534]",
+      badge: "bg-[#DCFCE7] text-[#166534] border border-transparent dark:bg-[#16A34A]/15 dark:text-[#4ADE80] dark:border-[#16A34A]/30",
       dot: "bg-healthy",
     },
     amber: {
-      badge: "bg-[#FEF3C7] text-[#92400E]",
+      badge: "bg-[#FEF3C7] text-[#92400E] border border-transparent dark:bg-[#F59E0B]/15 dark:text-[#FBBF24] dark:border-[#F59E0B]/30",
       dot: "bg-canary",
     },
     coral: {
-      badge: "bg-[#FEE2E2] text-[#991B1B]",
+      badge: "bg-[#FEE2E2] text-[#991B1B] border border-transparent dark:bg-[#DC2626]/15 dark:text-[#F87171] dark:border-[#DC2626]/30",
       dot: "bg-failed",
     },
     cyan: {
-      badge: "bg-[#DBEAFE] text-[#1E40AF]",
+      badge: "bg-[#DBEAFE] text-[#1E40AF] border border-transparent dark:bg-[#3B82F6]/15 dark:text-[#60A5FA] dark:border-[#3B82F6]/30",
       dot: "bg-primary",
     },
     steel: {
-      badge: "bg-[#F1F5F9] text-[#334155]",
+      badge: "bg-[#F1F5F9] text-[#334155] border border-transparent dark:bg-[#334155]/40 dark:text-[#94A3B8] dark:border-[#334155]/60",
       dot: "bg-baseline",
     },
   };

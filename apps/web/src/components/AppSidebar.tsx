@@ -15,10 +15,12 @@ import {
   Search,
   Palette,
   Terminal,
+  Sparkles,
 } from "lucide-react";
 import { api, ServiceWithStats } from "@/lib/api";
 import { formatVersion } from "@/lib/formatters";
 import { CreateServiceModal } from "@/components/CreateServiceModal";
+import { DEMO_SERVICES } from "@/lib/demo-data";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -69,9 +71,13 @@ export function AppSidebar() {
   const fetchServices = useCallback(async () => {
     try {
       const data = await api.getServices();
-      setServices(data);
+      if (data && data.length > 0) {
+        setServices(data);
+      } else {
+        setServices(DEMO_SERVICES);
+      }
     } catch {
-      // fallback silently
+      setServices(DEMO_SERVICES);
     } finally {
       setLoading(false);
     }
@@ -111,7 +117,8 @@ export function AppSidebar() {
   }, [currentServiceParam, services]);
 
   const navLinks = [
-    { label: "Fleet overview", href: "/", icon: <Activity className="w-4 h-4" /> },
+    { label: "Overview & Demo", href: "/", icon: <Sparkles className="w-4 h-4 text-primary" /> },
+    { label: "Fleet Control Plane", href: "/fleet", icon: <Activity className="w-4 h-4" /> },
     { label: "Design system", href: "/design-preview", icon: <Palette className="w-4 h-4" /> },
   ];
 
@@ -143,7 +150,7 @@ export function AppSidebar() {
           {!collapsed ? (
             <div className="h-14 px-4 border-b border-border flex items-center justify-between gap-2">
               <Link href="/" className="flex items-center gap-2.5 truncate">
-                <div className="w-7 h-7 rounded bg-[#F7F8FA] border border-border flex items-center justify-center text-primary shrink-0">
+                <div className="w-7 h-7 rounded bg-raised border border-border flex items-center justify-center text-primary shrink-0">
                   <Shield className="w-4 h-4" />
                 </div>
                 <div className="truncate">
@@ -170,7 +177,7 @@ export function AppSidebar() {
             <div className="h-14 border-b border-border flex items-center justify-center">
               <button
                 onClick={toggleCollapsed}
-                className="w-9 h-9 rounded bg-[#F7F8FA] border border-border flex items-center justify-center text-primary hover:border-primary/60 hover:bg-surface transition-colors group"
+                className="w-9 h-9 rounded bg-raised border border-border flex items-center justify-center text-primary hover:border-primary/60 hover:bg-surface transition-colors group"
                 title="Expand sidebar"
                 aria-label="Expand sidebar"
               >
@@ -189,7 +196,7 @@ export function AppSidebar() {
                   placeholder="Search services..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-8 pr-2 bg-[#F7F8FA] border border-border rounded text-14 text-text placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="w-full h-8 pl-8 pr-2 bg-raised border border-border rounded text-14 text-text placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
                 <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -207,8 +214,8 @@ export function AppSidebar() {
                     href={item.href}
                     className={`flex items-center gap-2.5 px-3 py-1.5 text-14 transition-colors ${
                       isActive
-                        ? "border-l-2 border-primary bg-[#F7F8FA] text-text font-medium"
-                        : "border-l-2 border-transparent text-muted hover:text-text hover:bg-[#F7F8FA]"
+                        ? "border-l-2 border-primary bg-raised text-text font-medium"
+                        : "border-l-2 border-transparent text-muted hover:text-text hover:bg-raised"
                     }`}
                     title={item.label}
                   >
@@ -220,15 +227,28 @@ export function AppSidebar() {
             </div>
           ) : (
             <div className="py-2.5 space-y-1 flex flex-col items-center">
-              {/* Fleet Overview Icon */}
+              {/* Overview & Demo Icon */}
               <Link
                 href="/"
                 className={`w-9 h-9 rounded flex items-center justify-center text-14 transition-colors ${
                   pathname === "/" && !currentServiceParam
                     ? "bg-primary text-white font-medium"
-                    : "text-muted hover:text-text hover:bg-[#F7F8FA]"
+                    : "text-muted hover:text-text hover:bg-raised"
                 }`}
-                title="Fleet overview"
+                title="Overview & Demo"
+              >
+                <Sparkles className="w-4 h-4" />
+              </Link>
+
+              {/* Fleet Control Plane Icon */}
+              <Link
+                href="/fleet"
+                className={`w-9 h-9 rounded flex items-center justify-center text-14 transition-colors ${
+                  pathname === "/fleet"
+                    ? "bg-primary text-white font-medium"
+                    : "text-muted hover:text-text hover:bg-raised"
+                }`}
+                title="Fleet Control Plane"
               >
                 <Activity className="w-4 h-4" />
               </Link>
@@ -236,7 +256,7 @@ export function AppSidebar() {
               {/* Microservices Drawer Opener Icon */}
               <button
                 onClick={toggleCollapsed}
-                className="relative w-9 h-9 rounded flex items-center justify-center text-muted hover:text-text hover:bg-[#F7F8FA] transition-colors"
+                className="relative w-9 h-9 rounded flex items-center justify-center text-muted hover:text-text hover:bg-raised transition-colors"
                 title={`Microservices (${services.length}) — Click to view fleet list`}
               >
                 <Server className="w-4 h-4" />
@@ -251,7 +271,7 @@ export function AppSidebar() {
                 className={`w-9 h-9 rounded flex items-center justify-center text-14 transition-colors ${
                   pathname === "/design-preview"
                     ? "bg-primary text-white font-medium"
-                    : "text-muted hover:text-text hover:bg-[#F7F8FA]"
+                    : "text-muted hover:text-text hover:bg-raised"
                 }`}
                 title="Design system"
               >
@@ -275,7 +295,7 @@ export function AppSidebar() {
                   href={item.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-between px-3 py-1.5 text-14 text-muted hover:text-text hover:bg-[#F7F8FA] transition-colors border-l-2 border-transparent"
+                  className="flex items-center justify-between px-3 py-1.5 text-14 text-muted hover:text-text hover:bg-raised transition-colors border-l-2 border-transparent"
                   title={`Open ${item.label}`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
@@ -294,7 +314,7 @@ export function AppSidebar() {
                   href={item.href}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-9 h-9 rounded flex items-center justify-center text-muted hover:text-text hover:bg-[#F7F8FA] transition-colors"
+                  className="w-9 h-9 rounded flex items-center justify-center text-muted hover:text-text hover:bg-raised transition-colors"
                   title={`Open ${item.label}`}
                 >
                   {item.icon}
@@ -315,7 +335,7 @@ export function AppSidebar() {
                 </span>
                 <button
                   onClick={() => setCreateModalOpen(true)}
-                  className="p-0.5 text-muted hover:text-text rounded hover:bg-[#F7F8FA] transition-colors"
+                  className="p-0.5 text-muted hover:text-text rounded hover:bg-raised transition-colors"
                   title="Register new microservice"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -326,8 +346,8 @@ export function AppSidebar() {
               <div className="space-y-0.5 max-h-[calc(100vh-380px)] overflow-y-auto">
                 {loading ? (
                   <div className="px-3 py-2 space-y-2">
-                    <div className="h-4 bg-[#F7F8FA] rounded animate-pulse-subtle" />
-                    <div className="h-4 bg-[#F7F8FA] rounded animate-pulse-subtle" />
+                    <div className="h-4 bg-raised rounded animate-pulse-subtle" />
+                    <div className="h-4 bg-raised rounded animate-pulse-subtle" />
                   </div>
                 ) : filteredServices.length === 0 ? (
                   <div className="px-3 py-2 text-12 text-muted">
@@ -344,12 +364,12 @@ export function AppSidebar() {
                         key={svc.id}
                         onClick={() => {
                           setCurrentServiceParam(svc.id);
-                          router.push(`/?service=${svc.id}`);
+                          router.push(`/fleet?service=${svc.id}`);
                         }}
                         className={`w-full text-left flex items-center justify-between px-3 py-1.5 text-14 transition-colors ${
                           isSelected
-                            ? "border-l-2 border-primary bg-[#F7F8FA] text-text font-medium"
-                            : "border-l-2 border-transparent text-muted hover:text-text hover:bg-[#F7F8FA]"
+                            ? "border-l-2 border-primary bg-raised text-text font-medium"
+                            : "border-l-2 border-transparent text-muted hover:text-text hover:bg-raised"
                         }`}
                         title={`${svc.name} (${formatVersion(svc.currentVersion)})`}
                       >
@@ -378,7 +398,7 @@ export function AppSidebar() {
               {/* + Register Service item */}
               <button
                 onClick={() => setCreateModalOpen(true)}
-                className="w-[calc(100%-16px)] mx-2 text-left flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded text-12 text-muted hover:text-text hover:bg-[#F7F8FA] transition-colors border border-dashed border-border"
+                className="w-[calc(100%-16px)] mx-2 text-left flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded text-12 text-muted hover:text-text hover:bg-raised transition-colors border border-dashed border-border"
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Add microservice...</span>
