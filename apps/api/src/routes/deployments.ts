@@ -241,7 +241,7 @@ async function handleUpdateDeployment(req: Request, res: Response) {
             newStatus: nextStatus,
             previousWeight: deployment.canaryWeight,
             newWeight: nextWeight,
-          } as Prisma.InputJsonValue,
+          } as any,
         },
       });
 
@@ -423,7 +423,7 @@ router.post("/:id/evaluate", async (req: Request, res: Response) => {
             breaches: evaluation.breaches,
             metrics: evaluation.metricsSnapshot,
             summary: evaluation.summary,
-          } as unknown as Prisma.InputJsonValue,
+          } as any,
         },
       });
 
@@ -535,7 +535,7 @@ router.post("/:id/start-canary-workflow", async (req: Request, res: Response) =>
           queueName: canaryEvaluationQueue.name,
           initialWeight: 5,
           targetUrl: resolvedTargetUrl,
-        } as unknown as Prisma.InputJsonValue,
+        } as any,
       },
     });
 

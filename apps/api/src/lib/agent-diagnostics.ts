@@ -192,7 +192,7 @@ export async function runAgentInvestigation(input: InvestigationInput) {
           confidence: diagnosis.confidence,
           recommendation: diagnosis.recommendation,
           rootCause: diagnosis.rootCauseAnalysis,
-        } as unknown as Prisma.InputJsonValue,
+        } as any,
       },
     });
 
