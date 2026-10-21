@@ -16,13 +16,19 @@ import {
   Palette,
   Terminal,
   Sparkles,
+  X,
 } from "lucide-react";
 import { api, ServiceWithStats } from "@/lib/api";
 import { formatVersion } from "@/lib/formatters";
 import { CreateServiceModal } from "@/components/CreateServiceModal";
 import { DEMO_SERVICES } from "@/lib/demo-data";
 
-export function AppSidebar() {
+export interface AppSidebarProps {
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export function AppSidebar({ mobileOpen = false, onCloseMobile }: AppSidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -446,6 +452,180 @@ export function AppSidebar() {
           )}
         </div>
       </aside>
+
+      {/* ─── Mobile Navigation Drawer Overlay ─────────────── */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 sm:hidden select-none">
+          {/* Backdrop */}
+          <div
+            onClick={onCloseMobile}
+            className="fixed inset-0 bg-[#0B0D15]/80 backdrop-blur-sm transition-opacity"
+            aria-hidden="true"
+          />
+
+          {/* Drawer container */}
+          <div className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface border-r border-border shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200">
+            <div>
+              {/* Header */}
+              <div className="h-14 px-4 border-b border-border flex items-center justify-between gap-2">
+                <Link
+                  href="/"
+                  onClick={onCloseMobile}
+                  className="flex items-center gap-2.5 truncate"
+                >
+                  <div className="w-7 h-7 rounded bg-raised border border-border flex items-center justify-center text-primary shrink-0">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div className="truncate">
+                    <div className="text-14 font-semibold text-text truncate">
+                      CanaryGuard
+                    </div>
+                    <div className="text-11 text-muted truncate">
+                      Control Plane
+                    </div>
+                  </div>
+                </Link>
+
+                <button
+                  onClick={onCloseMobile}
+                  className="p-1.5 text-muted hover:text-text hover:bg-raised rounded transition-colors"
+                  aria-label="Close navigation menu"
+                  title="Close menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Quick Search */}
+              <div className="p-3 border-b border-border">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-8 pl-8 pr-2 bg-raised border border-border rounded text-14 text-text placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  />
+                  <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Navigation Links */}
+              <div className="py-2 space-y-0.5">
+                {navLinks.map((item) => {
+                  const isActive = pathname === item.href && !currentServiceParam;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onCloseMobile}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-14 transition-colors ${
+                        isActive
+                          ? "border-l-2 border-primary bg-raised text-text font-medium"
+                          : "border-l-2 border-transparent text-muted hover:text-text hover:bg-raised"
+                      }`}
+                    >
+                      <span className="shrink-0">{item.icon}</span>
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Microservices Section */}
+              <div className="border-t border-border py-2 space-y-0.5">
+                <div className="flex items-center justify-between px-3 pt-1 pb-1">
+                  <span className="text-12 text-muted">
+                    Microservices ({services.length})
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (onCloseMobile) onCloseMobile();
+                      setCreateModalOpen(true);
+                    }}
+                    className="p-1 text-muted hover:text-text rounded hover:bg-raised transition-colors"
+                    title="Register new microservice"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-0.5 max-h-[calc(100vh-360px)] overflow-y-auto">
+                  {loading ? (
+                    <div className="px-3 py-2 space-y-2">
+                      <div className="h-4 bg-raised rounded animate-pulse-subtle" />
+                      <div className="h-4 bg-raised rounded animate-pulse-subtle" />
+                    </div>
+                  ) : filteredServices.length === 0 ? (
+                    <div className="px-3 py-2 text-12 text-muted">
+                      No services found.
+                    </div>
+                  ) : (
+                    filteredServices.map((svc) => {
+                      const isSelected = activeSelectedId === svc.id;
+                      const activeCanary = svc.deployments?.[0]?.canaryWeight ?? 0;
+                      const hasActiveCanary = activeCanary > 0;
+
+                      return (
+                        <button
+                          key={svc.id}
+                          onClick={() => {
+                            if (onCloseMobile) onCloseMobile();
+                            setCurrentServiceParam(svc.id);
+                            router.push(`/fleet?service=${svc.id}`);
+                          }}
+                          className={`w-full text-left flex items-center justify-between px-3 py-2 text-14 transition-colors ${
+                            isSelected
+                              ? "border-l-2 border-primary bg-raised text-text font-medium"
+                              : "border-l-2 border-transparent text-muted hover:text-text hover:bg-raised"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                svc.healthStatus === "HEALTHY"
+                                  ? "bg-healthy"
+                                  : "bg-baseline"
+                              }`}
+                            />
+                            <span className="truncate">{svc.name}</span>
+                          </div>
+
+                          {hasActiveCanary && (
+                            <span className="text-12 font-mono text-muted tabular-nums shrink-0">
+                              {activeCanary}%
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (onCloseMobile) onCloseMobile();
+                    setCreateModalOpen(true);
+                  }}
+                  className="w-[calc(100%-16px)] mx-2 text-left flex items-center gap-2 px-2.5 py-1.5 mt-2 rounded text-12 text-muted hover:text-text hover:bg-raised transition-colors border border-dashed border-border"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span>Add microservice...</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom Footer */}
+            <div className="p-3 border-t border-border bg-surface flex items-center justify-between text-12 text-muted">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-healthy shrink-0" />
+                <span>Guardrails armed</span>
+              </div>
+              <span className="font-mono tabular-nums">{formatVersion("2.1")}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal for adding service */}
       <CreateServiceModal

@@ -393,7 +393,7 @@ export default function DesignPreviewPage() {
         </h2>
 
         <Panel level="surface" className="overflow-hidden">
-          <Table>
+          <Table className="min-w-[550px]">
             <TableHead>
               <tr>
                 <TableHeaderCell>Deployment</TableHeaderCell>

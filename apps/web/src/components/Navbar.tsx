@@ -3,9 +3,13 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, RefreshCw, Sun, Moon, ChevronRight } from "lucide-react";
+import { Shield, RefreshCw, Sun, Moon, ChevronRight, Menu } from "lucide-react";
 
-export function Navbar() {
+export interface NavbarProps {
+  onOpenMobileNav?: () => void;
+}
+
+export function Navbar({ onOpenMobileNav }: NavbarProps = {}) {
   const pathname = usePathname();
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -73,9 +77,20 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-surface select-none">
-      <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2">
-        {/* Left: Breadcrumbs in Geist */}
+      <div className="w-full px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2">
+        {/* Left: Breadcrumbs in Geist + Mobile Drawer Trigger */}
         <div className="flex items-center gap-1.5 text-14 min-w-0">
+          {onOpenMobileNav && (
+            <button
+              onClick={onOpenMobileNav}
+              className="sm:hidden p-1.5 -ml-1 text-muted hover:text-text hover:bg-raised rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+              aria-label="Open navigation menu"
+              title="Open navigation menu"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+          )}
+
           <Link
             href="/"
             className="text-muted hover:text-text transition-colors flex items-center gap-1.5 shrink-0"

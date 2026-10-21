@@ -50,37 +50,41 @@ export function CanarySimulator() {
   return (
     <div className="rounded-2xl border border-white/10 bg-[#111422] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
       {/* ─── Product Window Chrome Bar ─────────────────────── */}
-      <div className="px-5 py-3.5 border-b border-white/10 bg-[#0B0D15]/90 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F56]/80" />
-          <div className="w-3 h-3 rounded-full bg-[#FFBD2E]/80" />
-          <div className="w-3 h-3 rounded-full bg-[#27C93F]/80" />
-          <span className="text-12 font-mono text-white/40 ml-2 hidden sm:inline">
+      <div className="px-3.5 sm:px-5 py-3 sm:py-3.5 border-b border-white/10 bg-[#0B0D15]/90 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-[#FF5F56]/80" />
+          <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-[#FFBD2E]/80" />
+          <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full bg-[#27C93F]/80" />
+          <span className="text-11 sm:text-12 font-mono text-white/40 ml-1.5 hidden md:inline">
             canaryguard.live/traffic-radar • reverse-proxy:8000
           </span>
         </div>
 
         {/* Live Status Pill */}
-        <div>
+        <div className="min-w-0">
           {isBugActive ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-12 font-medium bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-              <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-ping" />
-              SLA BREACH DETECTED • 95% PROTECTED
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-11 sm:text-12 font-medium bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30 shadow-[0_0_15px_rgba(239,68,68,0.2)] truncate">
+              <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-[#EF4444] animate-ping shrink-0" />
+              <span className="hidden sm:inline">SLA BREACH DETECTED • 95% PROTECTED</span>
+              <span className="sm:hidden">SLA BREACH • 95% SAFE</span>
             </span>
           ) : isRecovered ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-12 font-medium bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
-              INSTANTLY RESTORED • ZERO DOWNTIME
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-11 sm:text-12 font-medium bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 truncate">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+              <span className="hidden sm:inline">INSTANTLY RESTORED • ZERO DOWNTIME</span>
+              <span className="sm:hidden">RESTORED • 0s DOWNTIME</span>
             </span>
           ) : isRollout ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-12 font-medium bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30">
-              <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
-              CANARY ACTIVE • 5% TEST COHORT
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-11 sm:text-12 font-medium bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 truncate">
+              <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-[#F59E0B] animate-pulse shrink-0" />
+              <span className="hidden sm:inline">CANARY ACTIVE • 5% TEST COHORT</span>
+              <span className="sm:hidden">CANARY 5% ACTIVE</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-12 font-medium bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-              <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-              100% BASELINE NOMINAL
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-11 sm:text-12 font-medium bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 truncate">
+              <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-[#10B981] shrink-0" />
+              <span className="hidden sm:inline">100% BASELINE NOMINAL</span>
+              <span className="sm:hidden">100% BASELINE</span>
             </span>
           )}
         </div>
@@ -401,7 +405,7 @@ export function CanarySimulator() {
               </span>
               <button
                 onClick={() => setStep("RECOVERED")}
-                className="px-4 py-2 rounded-lg text-13 font-semibold bg-[#EF4444] hover:bg-[#DC2626] text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)] flex items-center gap-1.5 shrink-0"
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-lg text-13 font-semibold bg-[#EF4444] hover:bg-[#DC2626] text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)] flex items-center justify-center gap-1.5 shrink-0"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Approve &amp; Execute Instant Rollback</span>

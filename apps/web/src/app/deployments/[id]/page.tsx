@@ -406,9 +406,9 @@ export default function DeploymentDetailPage() {
       )}
 
       {/* ─── Metadata HUD (4 Solid Metric Tiles) ──────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Tile 1: Git Commit */}
-        <Panel level="surface" className="p-4 space-y-1">
+        <Panel level="surface" className="p-3 sm:p-4 space-y-1">
           <span className="text-12 font-mono text-text-muted uppercase tracking-wider block">
             Git Commit
           </span>
@@ -431,7 +431,7 @@ export default function DeploymentDetailPage() {
         </Panel>
 
         {/* Tile 2: Canary Split */}
-        <Panel level="surface" className="p-4 space-y-1">
+        <Panel level="surface" className="p-3 sm:p-4 space-y-1">
           <span className="text-12 font-mono text-text-muted uppercase tracking-wider block">
             Traffic Allocation
           </span>
@@ -457,7 +457,7 @@ export default function DeploymentDetailPage() {
         </Panel>
 
         {/* Tile 3: Triggered By */}
-        <Panel level="surface" className="p-4 space-y-1">
+        <Panel level="surface" className="p-3 sm:p-4 space-y-1">
           <span className="text-12 font-mono text-text-muted uppercase tracking-wider block">
             Trigger Actor
           </span>
@@ -470,7 +470,7 @@ export default function DeploymentDetailPage() {
         </Panel>
 
         {/* Tile 4: Duration */}
-        <Panel level="surface" className="p-4 space-y-1">
+        <Panel level="surface" className="p-3 sm:p-4 space-y-1">
           <span className="text-12 font-mono text-text-muted uppercase tracking-wider block">
             Flight Clock
           </span>
@@ -935,12 +935,12 @@ export default function DeploymentDetailPage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        <div className="flex sm:grid sm:grid-cols-5 overflow-x-auto gap-3 pb-2 -mx-1 px-1">
           {(deployment.steps || []).map((step, idx) => (
             <Panel
               key={step.id}
               level="surface"
-              className="p-4 space-y-2 relative"
+              className="p-3 sm:p-4 space-y-2 relative min-w-[190px] sm:min-w-0 shrink-0 sm:shrink flex-1"
             >
               <div className="flex items-center justify-between">
                 <span className="text-12 font-mono text-text-muted">
@@ -974,7 +974,7 @@ export default function DeploymentDetailPage() {
               No audit log entries recorded for this deployment.
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[500px]">
               <TableHead>
                 <TableRow>
                   <TableHeaderCell className="w-28">Timestamp</TableHeaderCell>

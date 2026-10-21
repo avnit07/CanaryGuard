@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import {
   Shield,
@@ -25,17 +25,21 @@ import {
   Code,
   Gauge,
   Sliders,
+  Menu,
+  X,
 } from "lucide-react";
 import { CanarySimulator } from "@/components/CanarySimulator";
 
 export default function OverviewPage() {
   const demoRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -51,7 +55,7 @@ export default function OverviewPage() {
             <span className="font-semibold text-16 tracking-tight text-white">CanaryGuard</span>
           </Link>
 
-          {/* Center: Clean Nav Links */}
+          {/* Center: Clean Nav Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-8 text-14 font-medium text-white/70">
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
@@ -86,7 +90,7 @@ export default function OverviewPage() {
           </nav>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="https://github.com/avnits954/canaryGuard"
               target="_blank"
@@ -99,13 +103,80 @@ export default function OverviewPage() {
 
             <Link
               href="/fleet"
-              className="px-4 py-2 rounded-lg bg-[#5A46FF] hover:bg-[#4834EA] text-white font-medium text-13 transition-all shadow-[0_0_15px_rgba(90,70,255,0.3)] hover:shadow-[0_0_25px_rgba(90,70,255,0.5)] flex items-center gap-1.5"
+              className="hidden sm:inline-flex px-4 py-2 rounded-lg bg-[#5A46FF] hover:bg-[#4834EA] text-white font-medium text-13 transition-all shadow-[0_0_15px_rgba(90,70,255,0.3)] hover:shadow-[0_0_25px_rgba(90,70,255,0.5)] items-center gap-1.5"
             >
               <span>Launch Fleet Console</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
+
+            {/* Mobile Hamburger Menu Toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A46FF]"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-white/10 bg-[#0B0D15]/95 backdrop-blur-xl px-4 py-4 space-y-3 animate-in fade-in duration-200">
+            <button
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left py-2 text-15 font-medium text-white/80 hover:text-white"
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => scrollToSection("demo")}
+              className="block w-full text-left py-2 text-15 font-medium text-white/80 hover:text-white"
+            >
+              Live Demo
+            </button>
+            <button
+              onClick={() => scrollToSection("benefits")}
+              className="block w-full text-left py-2 text-15 font-medium text-white/80 hover:text-white"
+            >
+              Benefits
+            </button>
+            <button
+              onClick={() => scrollToSection("features")}
+              className="block w-full text-left py-2 text-15 font-medium text-white/80 hover:text-white"
+            >
+              Features
+            </button>
+            <button
+              onClick={() => scrollToSection("comparison")}
+              className="block w-full text-left py-2 text-15 font-medium text-white/80 hover:text-white"
+            >
+              Comparison
+            </button>
+            <div className="pt-2 border-t border-white/10 flex flex-col gap-2.5">
+              <Link
+                href="/fleet"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center px-4 py-2.5 rounded-lg bg-[#5A46FF] hover:bg-[#4834EA] text-white font-medium text-14 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(90,70,255,0.4)]"
+              >
+                <span>Launch Fleet Console</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <a
+                href="https://github.com/avnits954/canaryGuard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full text-center py-2 text-13 text-white/60 hover:text-white flex items-center justify-center gap-1.5"
+              >
+                <span>View on GitHub</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ─── Ambient Glow Background Accents ───────────────── */}
@@ -126,7 +197,7 @@ export default function OverviewPage() {
               </div>
 
               {/* Commanding Hero Headline */}
-              <h1 className="text-42 sm:text-60 lg:text-68 font-bold tracking-tight leading-[1.08] text-white">
+              <h1 className="text-36 sm:text-56 lg:text-68 font-bold tracking-tight leading-[1.08] text-white">
                 Code is deploying to production.{" "}
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-[#6366F1]">
                   Are you still in control?
@@ -134,16 +205,16 @@ export default function OverviewPage() {
               </h1>
 
               {/* Clear, High-Impact Subtitle */}
-              <p className="text-17 sm:text-20 text-white/70 leading-relaxed max-w-xl">
+              <p className="text-16 sm:text-20 text-white/70 leading-relaxed max-w-xl">
                 Software updates often have hidden bugs. CanaryGuard tests new code on 5% of users first. If anything breaks, our AI safety watchdog detects the issue and restores the safe version in seconds—before your customers notice.
               </p>
 
               {/* Button Group */}
               <div className="space-y-4 pt-1">
-                <div className="flex flex-wrap items-center gap-3.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <button
                     onClick={() => scrollToSection("demo")}
-                    className="px-8 py-3.5 rounded-xl bg-[#5A46FF] hover:bg-[#4834EA] text-white font-semibold text-15 transition-all shadow-[0_0_30px_rgba(90,70,255,0.45)] hover:shadow-[0_0_40px_rgba(90,70,255,0.65)] flex items-center gap-2"
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#5A46FF] hover:bg-[#4834EA] text-white font-semibold text-15 transition-all shadow-[0_0_30px_rgba(90,70,255,0.45)] hover:shadow-[0_0_40px_rgba(90,70,255,0.65)] flex items-center justify-center gap-2"
                   >
                     <span>Try Live Demo</span>
                     <Zap className="w-4 h-4" />
@@ -151,7 +222,7 @@ export default function OverviewPage() {
 
                   <Link
                     href="/fleet"
-                    className="px-8 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 text-white font-semibold text-15 transition-colors flex items-center gap-2"
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 text-white font-semibold text-15 transition-colors flex items-center justify-center gap-2"
                   >
                     <span>Explore Control Plane</span>
                     <ArrowRight className="w-4 h-4" />
@@ -159,7 +230,7 @@ export default function OverviewPage() {
                 </div>
 
                 {/* Secondary Talk / GitHub Row */}
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
                   <a
                     href="https://github.com/avnits954/canaryGuard"
                     target="_blank"
@@ -169,15 +240,15 @@ export default function OverviewPage() {
                     <span>View Monorepo on GitHub</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                  <span className="text-white/30">•</span>
-                  <span className="text-12 text-white/50">Next.js 15, Redis, Express &amp; PostgreSQL</span>
+                  <span className="text-white/30 hidden sm:inline">•</span>
+                  <span className="text-12 text-white/50 block w-full sm:w-auto">Next.js 15, Redis, Express &amp; PostgreSQL</span>
                 </div>
               </div>
             </div>
 
             {/* Right: Live Interactive Architecture Flow Map */}
             <div className="lg:col-span-5">
-              <div className="relative rounded-2xl border border-white/10 bg-[#111422] p-6 shadow-[0_0_50px_rgba(0,0,0,0.6)] space-y-4 overflow-hidden">
+              <div className="relative rounded-2xl border border-white/10 bg-[#111422] p-5 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.6)] space-y-4 overflow-hidden">
                 <div className="absolute top-0 right-0 w-56 h-56 bg-[#5A46FF]/15 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Frame Header */}
@@ -208,7 +279,7 @@ export default function OverviewPage() {
                 </div>
 
                 {/* Split Routing Channels */}
-                <div className="pl-6 space-y-2.5 border-l-2 border-[#5A46FF]/40 ml-4 py-1">
+                <div className="pl-4 sm:pl-6 space-y-2.5 border-l-2 border-[#5A46FF]/40 ml-2 sm:ml-4 py-1">
                   {/* Stable Baseline Pod */}
                   <div className="p-3 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 flex items-center justify-between text-12">
                     <div className="flex items-center gap-2.5">
@@ -235,7 +306,7 @@ export default function OverviewPage() {
                 </div>
 
                 {/* AI Safety Watchdog Footer Strip */}
-                <div className="p-3.5 rounded-xl bg-[#16192B] border border-white/10 flex items-center justify-between text-12">
+                <div className="p-3.5 rounded-xl bg-[#16192B] border border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-12">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-[#8B7CF6]" />
                     <span className="text-white/80">AI Safety Watchdog:</span>
@@ -465,13 +536,13 @@ export default function OverviewPage() {
           {/* ═══════════════════════════════════════════════════ */}
           {/* 6. ENGINEERING GATEWAY (JigsawML CTA Style)        */}
           {/* ═══════════════════════════════════════════════════ */}
-          <div className="p-8 sm:p-10 rounded-2xl border border-white/10 bg-gradient-to-r from-[#111422] via-[#16192B] to-[#111422] flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-2xl">
+          <div className="p-6 sm:p-10 rounded-2xl border border-white/10 bg-gradient-to-r from-[#111422] via-[#16192B] to-[#111422] flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-2xl">
             <div className="space-y-2 max-w-xl">
               <div className="inline-flex items-center gap-2 text-12 font-mono text-[#A5B4FC]">
                 <Shield className="w-4 h-4 text-[#8B7CF6]" />
                 <span>For Software Engineers, SREs &amp; Technical Evaluators</span>
               </div>
-              <h3 className="text-22 font-semibold text-white">
+              <h3 className="text-20 sm:text-22 font-semibold text-white">
                 Inspect the Live Distributed Control Plane
               </h3>
               <p className="text-13 text-white/60 leading-relaxed">
@@ -479,17 +550,17 @@ export default function OverviewPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto shrink-0">
               <Link
                 href="/fleet"
-                className="px-6 py-3 rounded-lg bg-[#5A46FF] hover:bg-[#4834EA] text-white font-semibold text-14 transition-all shadow-[0_0_20px_rgba(90,70,255,0.4)]"
+                className="w-full sm:w-auto text-center px-6 py-3 rounded-lg bg-[#5A46FF] hover:bg-[#4834EA] text-white font-semibold text-14 transition-all shadow-[0_0_20px_rgba(90,70,255,0.4)]"
               >
                 Launch Fleet Control Center
               </Link>
 
               <Link
                 href="/design-preview"
-                className="px-6 py-3 rounded-lg bg-transparent hover:bg-white/5 border border-white/20 text-white font-semibold text-14 transition-colors"
+                className="w-full sm:w-auto text-center px-6 py-3 rounded-lg bg-transparent hover:bg-white/5 border border-white/20 text-white font-semibold text-14 transition-colors"
               >
                 Design System
               </Link>
@@ -507,7 +578,7 @@ export default function OverviewPage() {
               <span>Autonomous Release Safety Platform</span>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               <Link href="/fleet" className="hover:text-white transition-colors">
                 Fleet Console
               </Link>

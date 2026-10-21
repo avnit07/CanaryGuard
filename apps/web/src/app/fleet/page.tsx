@@ -195,7 +195,7 @@ function FleetContent() {
               </Badge>
             )}
           </div>
-          <h1 className="text-28 font-semibold text-text">
+          <h1 className="text-22 sm:text-28 font-semibold text-text">
             Deployment fleet control center
           </h1>
         </div>
@@ -204,7 +204,8 @@ function FleetContent() {
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/">
             <Button variant="secondary" size="sm">
-              ← Back to Project Overview
+              <span className="hidden sm:inline">← Back to Project Overview</span>
+              <span className="sm:hidden">← Overview</span>
             </Button>
           </Link>
 
@@ -505,7 +506,7 @@ function FleetContent() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[620px]">
               <TableHead>
                 <TableRow>
                   <TableHeaderCell>Service & Version</TableHeaderCell>
